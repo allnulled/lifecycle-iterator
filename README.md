@@ -16,6 +16,32 @@ To have a nice and flexible API for lifecycles.
 
 ## Usage
 
+### Simple demo
+
+```js
+const LifecycleIterator = require("lifecycle-iterator");
+
+LifecycleIterator.create({
+    $scope: {
+        onStart(data) {
+            return new Promise(ok => {
+                setTimeout(() => {
+                    ok(data + 100);
+                }, 100);
+            });
+        },
+        onEnd(data) {
+            return data + 200;
+        }
+    },
+    $cycle: ["onStart", "onEnd"]
+}).start(50).then(output => {
+    expect(output).to.equal(350);
+}).catch(console.log);
+```
+
+### Explanation
+
 The API is a simple class that represents an async/sync lifecycle iterator.
 
 It accepts a `$cycle` parameter, by which you define the cycle of callbacks for this lifecycle. It can be:
