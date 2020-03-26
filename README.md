@@ -114,5 +114,340 @@ iterator.start(1000).then(output => {
 }).catch(console.log);
 ```
 
+### Example of `setOutput` method:
 
+```js
+LifecycleIterator.create({
+    $cycle: [
+        function(iterator) {
+            iterator.setOutput(500);
+        },
+        function() {
+            console.log("If nothing is returned, the $output property is the last value returned");
+        }
+    ]
+}).start().then(output => {
+    expect(output).to.equal(500);
+}).catch(console.log);
+```
+
+### Example of `setError` method:
+
+```js
+LifecycleIterator.create({
+    $cycle: [
+        function(iterator) {
+            iterator.setError(new Error("ok"));
+        },
+        function() {
+            console.log("This is still executed. Returning anything is useless.");
+        }
+    ]
+}).start().then(console.log).catch(error => {
+    expect(error.message).to.equal("ok");
+});
+```
+
+### Example of `exit` method:
+
+```js
+LifecycleIterator.create({
+    $cycle: [
+        function(iterator) {
+            iterator.setOutput(400).exit();
+        },
+        function() {
+            console.log("This is never executed.");
+        }
+    ]
+}).start().then(output => {
+    expect(output).to.equal(400);
+}).catch(console.log);
+```
+
+### Example of `race group`:
+
+```js
+LifecycleIterator.create({
+    $cycle: [
+        "~~viaA",
+        "~~viaB",
+    ],
+    $scope: {
+        viaA() {
+            return new Promise(ok => {
+                setTimeout(() => ok(1), 200);
+            })
+        },
+        viaB() {
+            return new Promise(ok => {
+                setTimeout(() => ok(2), 100);
+            })
+        }
+    }
+}).start().then(output => {
+    expect(output).to.equal(2);
+}).catch(console.log);
+```
+
+### Example of `parallel group`:
+
+```js
+LifecycleIterator.create({
+    $cycle: [
+        "~viaA",
+        "~viaB",
+    ],
+    $scope: {
+        viaA() {
+            return new Promise(ok => {
+                setTimeout(() => ok(1), 200);
+            })
+        },
+        viaB() {
+            return new Promise(ok => {
+                setTimeout(() => ok(2), 100);
+            })
+        }
+    }
+}).start().then(output => {
+    expect(output).to.deep.equal([1,2]);
+}).catch(console.log);
+```
+
+### Example of synchronous and asynchronous functions, and nested lifecycle-iterators:
+
+This example is a bit more complex.
+
+The first iterator demonstrates how to use the `$scope` attribute to concatenate calls.
+
+The second iterator demonstrates how to use directly the `$cycle` to concatenate functions and lambdas.
+
+The third iterator, finally, demonstrates how to use `"~"` and `"~~"` to make `parallel` and `racing` groups of calls easily.
+
+Direct `Promises` are excluded from this example because when you concatenate a `Promise`, you cannot receive the parameter of the previous subcycle.
+
+The example uses the `expect` expression of testing to demonstrate that the cycle of callbacks is respected exactly as expected.
+
+```js
+const iterator = Life.create({
+    $cycle: [
+        "onAsyncFunction",
+        "onSyncFunction",
+        "onAsyncLambda",
+        "onSyncLambda",
+        "onNestedIterator",
+    ],
+    $scope: {
+        onAsyncFunction: async function(data) {
+            await new Promise(ok => {
+                setTimeout(ok, 100)
+            });
+            return data.concat(["onAsyncFunction"]);
+        },
+        onSyncFunction: function(data) {
+            return data.concat(["onSyncFunction"]);
+        },
+        onAsyncLambda: async (data) => {
+            await new Promise(ok => {
+                setTimeout(ok, 100)
+            });
+            return data.concat(["onAsyncLambda"]);
+        },
+        onSyncLambda: (data) => {
+            return data.concat(["onSyncLambda"]);
+        },
+        onNestedIterator(data) {
+            // Second lifecycle:
+            return Life.create({
+                $cycle: [
+                    async function(data) {
+                        await new Promise(ok => {
+                            setTimeout(ok, 100);
+                        });
+                        return data.concat(["async function(data)"]);
+                    },
+                    function(data) {
+                        data = data.concat(["function(data)"]);
+                        return data;
+                    },
+                    async (data) => {
+                        await new Promise(ok => {
+                            setTimeout(ok, 100);
+                        });
+                        return data.concat(["async (data)"]);
+                    },
+                    (data) => {
+                        return data.concat(["(data)"]);
+                    },
+                    function(data) {
+                        // Third lifecycle:
+                        return Life.create({
+                            $cycle: [
+                                "onStart",
+                                "~~onSourceOne",
+                                "~~onSourceTwo",
+                                "~~onSourceThree",
+                                "~onExtractDataOne",
+                                "~onExtractDataTwo",
+                                "~onExtractDataThree",
+                                "onUnify",
+                                "onEnd",
+                            ],
+                            $scope: {
+                                onStart(data) {
+                                    return new Promise(ok => {
+                                        setTimeout(() => {
+                                            ok(data.concat(["onStart"]));
+                                        }, 100);
+                                    })
+                                },
+                                onSourceOne(data) {
+                                    return new Promise(ok => {
+                                        setTimeout(() => {
+                                            ok(data.concat(["~~onSourceOne"])); // NO!
+                                        }, 500);
+                                    })
+                                },
+                                onSourceTwo(data) {
+                                    return new Promise(ok => {
+                                        setTimeout(() => {
+                                            ok(data.concat(["~~onSourceTwo"])); // NO!
+                                        }, 300);
+                                    })
+                                },
+                                onSourceThree(data) {
+                                    return new Promise(ok => {
+                                        setTimeout(() => {
+                                            ok(data.concat(["~~onSourceThree"]));
+                                        }, 100);
+                                    })
+                                },
+                                onExtractDataOne(data) {
+                                    return new Promise(ok => {
+                                        setTimeout(() => {
+                                            ok(data.concat(["~onExtractDataOne"]));
+                                        }, 300);
+                                    })
+                                },
+                                onExtractDataTwo(data) {
+                                    return new Promise(ok => {
+                                        setTimeout(() => {
+                                            ok(data.concat(["~onExtractDataTwo"]));
+                                        }, 100);
+                                    })
+                                },
+                                onExtractDataThree(data) {
+                                    return new Promise(ok => {
+                                        setTimeout(() => {
+                                            ok(data.concat(["~onExtractDataThree"]));
+                                        }, 200);
+                                    })
+                                },
+                                onUnify(data) {
+                                    console.log("onUnify")
+                                    let base = data[0];
+                                    base = base.concat(data[1][data[1].length-1]);
+                                    base = base.concat(data[2][data[2].length-1]);
+                                    return base.concat(["onUnify"]);
+                                },
+                                onEnd(data) {
+                                    return new Promise(ok => {
+                                        setTimeout(() => {
+                                            ok(data.concat(["onEnd"]));
+                                        }, 100);
+                                    })
+                                },
+                            }
+                        }).start(data);
+                    }
+                ]
+            }).start(data)
+        },
+    },
+    $output: "default output",
+    $success() {
+        console.log("Exited successfully");
+    },
+    $failure() {
+        console.log("Exited erroneously");
+    },
+    $complete() {
+        console.log("Exited finally");
+    },
+});
+
+iterator.start([]).then(output => {
+    expect(output).to.deep.equal([
+        'onAsyncFunction',
+        'onSyncFunction',
+        'onAsyncLambda',
+        'onSyncLambda',
+        'async function(data)',
+        'function(data)',
+        'async (data)',
+        '(data)',
+        'onStart',
+        '~~onSourceThree',
+        '~onExtractDataOne',
+        '~onExtractDataTwo',
+        '~onExtractDataThree',
+        'onUnify',
+        'onEnd'
+    ]);
+}).catch(console.log);
+```
+
+## API
+
+### Cheat sheet
+
+```js
+LifecycleIterator.create({
+	$scope: {...},
+	$cycle: [
+		"method1",
+		"~method2parallel",
+		"~method3parallel",
+		"~method4parallel",
+		"~~method5race",
+		"~~method6race",
+		"~~method7race",
+		Promise.all([promise1, promise2, promise3]),
+		Promise.race([runner1, runner2, runner3]),
+		new Promise(ok => setTimeout(ok, 1000)),
+		function(data) => {return new Promise(ok => setTimeout(ok, 1000))},
+		(data, iterator) => new Promise(ok => setTimeout(ok, 1000)),
+		(data, iterator) => LifecycleIterator.create({
+			$scope: {...},
+			$cycle: [...],
+			// $success(data) {},
+			// $failure(error) {},
+			// $complete(data) {},
+			// $output: undefined,
+			// $error: [],
+			// $trace: [],
+			// $index: 0,
+			// $$status,
+		}).start(data),
+		(data, iterator) => {
+			iterator.setOutput(data);
+			iterator.setError(new Error("Whatever"));
+			iterator.exit();
+		}
+	]
+}).start(startData).then(output => {
+	//...
+}).catch(error => {
+
+});
+```
+
+### License
+
+This project is under [WTFPL](https://es.wikipedia.org/wiki/WTFPL).
+
+### Issues
+
+Please, any issue or suggestion, [here](https://github.com/allnulled/lifecycle-iterator/issues).
 

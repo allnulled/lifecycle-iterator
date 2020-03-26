@@ -3,7 +3,7 @@ const {
 } = require("chai");
 const Life = require(__dirname + "/../src");
 
-describe("LifecycleIterator", function() {
+describe("LifecycleIterator class", function() {
 
 	it("works in general", function(done) {
 		const lifecycle = Life.create({
@@ -63,7 +63,7 @@ describe("LifecycleIterator", function() {
 				"onFormatResults"
 			],
 			$success() {
-				console.log("successssss")
+				// console.log("successssss")
 			}
 		});
 		lifecycle.start(1000).then(output => {
@@ -585,7 +585,7 @@ describe("LifecycleIterator", function() {
 		});
 		iterator.start(1000).then(output => {
 			expect(output).to.equal(1312); // >> 1312
-			expect(iterator.$trace).to.deep.equal(["onStart","onProcess","onEnd"]); // >> [ "onStart", "onProcess", "onEnd" ]
+			expect(iterator.$trace).to.deep.equal(["onStart", "onProcess", "onEnd"]); // >> [ "onStart", "onProcess", "onEnd" ]
 			done();
 		}).catch(console.log);
 	});
@@ -595,13 +595,19 @@ describe("LifecycleIterator", function() {
 			$cycle: ["onStart", "onProcess", "onEnd"],
 			$scope: {
 				onStart(data) {
-					return new Promise(ok => {ok(data + 10)});
+					return new Promise(ok => {
+						ok(data + 10)
+					});
 				},
 				onProcess(data) {
-					return new Promise(ok => {ok(data + 2)});
+					return new Promise(ok => {
+						ok(data + 2)
+					});
 				},
 				onEnd(data) {
-					return new Promise(ok => {ok(data + 300)});
+					return new Promise(ok => {
+						ok(data + 300)
+					});
 				},
 			},
 			$output: "default output",
@@ -617,7 +623,7 @@ describe("LifecycleIterator", function() {
 		});
 		iterator.start(1000).then(output => {
 			expect(output).to.equal(1312); // >> 1312
-			expect(iterator.$trace).to.deep.equal(["onStart","onProcess","onEnd"]); // >> [ "onStart", "onProcess", "onEnd" ]
+			expect(iterator.$trace).to.deep.equal(["onStart", "onProcess", "onEnd"]); // >> [ "onStart", "onProcess", "onEnd" ]
 			done();
 		}).catch(console.log);
 	});
@@ -630,7 +636,7 @@ describe("LifecycleIterator", function() {
 					return new Promise(ok => {
 						setTimeout(() => ok(iterator.$extraParameter + data + 10), 100);
 					})
-				}, 
+				},
 				function(data) {
 					return new Promise(ok => {
 						setTimeout(() => ok(data + 1000), 100);
@@ -644,6 +650,101 @@ describe("LifecycleIterator", function() {
 		}).catch(console.log);
 	});
 
+	it("works with setOutput example", function(done) {
+		Life.create({
+			$cycle: [
+				function(iterator) {
+					iterator.setOutput(500);
+				},
+				function() {
+					// console.log("If nothing is returned, the $output property is the last value returned");
+				}
+			]
+		}).start().then(output => {
+			expect(output).to.equal(500);
+			done();
+		}).catch(console.log);
+	});
+
+	it("works with setError example", function(done) {
+		Life.create({
+		    $cycle: [
+		        function(iterator) {
+		            iterator.setError(new Error("ok"));
+		        },
+		        function() {
+		            // console.log("This is still executed. Returning anything is useless.");
+		        }
+		    ]
+		}).start().then(console.log).catch(error => {
+		    expect(error.message).to.equal("ok");
+		    done();
+		});
+	});
+
+	it("works with exit example", function(done) {
+		Life.create({
+		    $cycle: [
+		        function(iterator) {
+		            iterator.setOutput(400).exit();
+		        },
+		        function() {
+		            console.log("This is never executed.");
+		        }
+		    ]
+		}).start().then(output => {
+		    expect(output).to.equal(400);
+		    done();
+		}).catch(console.log);
+	});
+
+	it("works with race group", function(done) {
+		Life.create({
+		    $cycle: [
+		        "~~viaA",
+		        "~~viaB",
+		    ],
+		    $scope: {
+		        viaA() {
+		            return new Promise(ok => {
+		                setTimeout(() => ok(1), 200);
+		            })
+		        },
+		        viaB() {
+		            return new Promise(ok => {
+		                setTimeout(() => ok(2), 100);
+		            })
+		        }
+		    }
+		}).start().then(output => {
+		    expect(output).to.equal(2);
+		    done();
+		}).catch(console.log);
+	})
+
+	it("works with parallel group", function(done) {
+		Life.create({
+		    $cycle: [
+		        "~viaA",
+		        "~viaB",
+		    ],
+		    $scope: {
+		        viaA() {
+		            return new Promise(ok => {
+		                setTimeout(() => ok(1), 200);
+		            })
+		        },
+		        viaB() {
+		            return new Promise(ok => {
+		                setTimeout(() => ok(2), 100);
+		            })
+		        }
+		    }
+		}).start().then(output => {
+		    expect(output).to.deep.equal([1,2]);
+		    done();
+		}).catch(console.log);
+	})
 
 	/*
 	provocar errores en una función de ciclo.

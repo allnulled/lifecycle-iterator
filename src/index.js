@@ -66,15 +66,20 @@ class Life {
 	}
 
 	$$next(...args) {
+		// si se ha llamado a salir...
 		if(this.$exit === true) {
+			// ...y el status es erroneo
 			if(this.$$status === this.constructor.IS_ERRONEOUS) {
 				this.$$handleError(this.$error);
+			// ...y el status no es erroneo
 			} else {
 				this.$$handleSuccess((args.length && typeof args[0] !== "undefined") ? args[0] : this.$output);
 			}
 			return;
 		}
+		// si el índice sobrepasa las vueltas...
 		if(this.$index >= this.$cycle.length) {
+			// ...dependiendo del status...
 			switch(this.$$status) {
 				case this.constructor.IS_ERRONEOUS:
 					this.$$handleError(this.$error);
@@ -88,19 +93,26 @@ class Life {
 			}
 			return;
 		} else {
+			// si el índice no sobrepasa las vueltas...
+			// cogemos el ciclo
 			const method = this.$cycle[this.$index++];
 			let output = undefined;
+			// si el ciclo es un texto...
 			if(typeof method === "string") {
+				// cogemos el nombre del texto sin modificadores
 				const cycleName = method.replace(/^~+/g, "");
+				// si el nombre no está en el scope, lanzamos error
 				if(!(cycleName in this.$scope)) {
-					this.$$handleError(new Error("CycleNotFoundError"));
+					this.$$handleError.call(this, new Error("CycleNotFoundError"));
 					return;
 				}
+				// si tiene el modificador de carreras...
 				if(method.startsWith("~~")) {
 					let subindex = 0;
 					const raceMethods = [];
 					let isStopped = false;
 					this.$index--;
+					// delimitamos el grupo de las carreras
 					while(!isStopped) {
 						const subcycle = this.$cycle[this.$index + (subindex++)];
 						if(typeof subcycle !== "string") {
@@ -124,7 +136,9 @@ class Life {
 							}
 						}
 					}
+					// resituamos el índice
 					this.$index = this.$index + subindex - 1;
+					// e iniciamos la carrera
 					Promise.race(raceMethods).then(this.$$next.bind(this)).catch(this.$$handleError.bind(this));
 					return;
 				} else if(method.startsWith("~")) {
@@ -163,7 +177,7 @@ class Life {
 					try {
 						output = this.$scope[method](...args, this);
 					} catch(error) {
-						return this.$$handleError(error);
+						return this.$$handleError.call(this, error);
 					}
 				}
 			} else if(typeof method === "function") {
@@ -171,7 +185,7 @@ class Life {
 				try {
 					output = method(...args, this);
 				} catch(error) {
-					return this.$$handleError(error);
+					return this.$$handleError.call(this, error);
 				}
 			} else if(method instanceof Promise) {
 				this.$$traceFunction(method);
@@ -183,16 +197,16 @@ class Life {
 			if(output instanceof Promise) {
 				output.then(this.$$next.bind(this)).catch(this.$$handleError.bind(this));
 			} else {
-				setImmediate(this.$$next.bind(this), output);
+				setImmediate(this.$$next.bind(this), output, this);
 			}
 		}
 	}
 
-	start(arg) {
+	start(...args) {
 		this.$promise = new Promise((ok, fail) => {
 			this.$$success = ok;
 			this.$$failure = fail;
-			this.$$next(arg);
+			this.$$next(...args);
 		})
 		.then(arg => {
 			const result = this.$success(arg);
