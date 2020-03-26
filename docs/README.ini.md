@@ -20,15 +20,15 @@ The API is a simple class that represents an async/sync lifecycle iterator.
 
 It accepts a `$cycle` parameter, by which you define the cycle of callbacks for this lifecycle. It can be:
 
-    - A `Function` that returns a `Promise` (for asynchronous steps).
-    - A `Function` that does not return a `Promise` (for synchronous steps).
-    - A `Promise` (for asynchronous operations to be completed).
-    - A `String` that points to a `$scope`'s function. They can be prefixed (or not) by:
+   - A `Function` that returns a `Promise` (for asynchronous steps).
+   - A `Function` that does not return a `Promise` (for synchronous steps).
+   - A `Promise` (for asynchronous operations to be completed).
+   - A `String` that points to a `$scope`'s function. They can be prefixed (or not) by:
 
-        - `~`: indicating the start of a `parallel group`, they start at the same time, but they end when all of them are finished. It returns an `Array` of values for every item of the group.
-        - `~~`: indicating the start of a `racing group`, they start at the same time, but they end when the first of them is finished. It returns only a single value for the first item that finished.
+       - `~`: indicating the start of a `parallel group`, they start at the same time, but they end when all of them are finished. It returns an `Array` of values for every item of the group.
+       - `~~`: indicating the start of a `racing group`, they start at the same time, but they end when the first of them is finished. It returns only a single value for the first item that finished.
 
-    - Any other value, which will be treated as a final value.
+   - Any other value, which will be treated as a final value.
 
 It also accepts a `$scope` parameter, by which you define the object where the names of the `$cycle` parameter pick their represented functions.
 
@@ -40,20 +40,20 @@ Moreover, you can access the `iterator` instance by the last of the parameters o
 
 With the `iterator` instance, you also have these methods:
 
-    - `iterator.start(...data)`: to start the lifecycle passing some initial values. It returns a `Promise`.
-    - `iterator.exit()`: to exit before starting the next cycle. It returns the iterator itself.
-    - `iterator.setOutput(data)`: to set the output of the lifecycle. It returns the iterator itself.
-    - `iterator.setError(error)`: to set the status of erroneous, and the error you want to throw. It returns the iterator itself.
+   - `iterator.start(...data)`: to start the lifecycle passing some initial values. It returns a `Promise`.
+   - `iterator.exit()`: to exit before starting the next cycle. It returns the iterator itself.
+   - `iterator.setOutput(data)`: to set the output of the lifecycle. It returns the iterator itself.
+   - `iterator.setError(error)`: to set the status of erroneous, and the error you want to throw. It returns the iterator itself.
 
 The `iterator.start()` method returns a `Promise` representing the whole lifecycle, which you can use to continue coding after the lifecycle exits, successfully or erroneously. This way, you do not need to use the `$success`, `$failure` and `$complete` properties of the iterator (which are also accepted).
 
 With this class, you can speed up the process of creating asynchronous code under **parallel, series or race** approaches.
 
-    - **In series**, this is the default approach of the API.
+   - **In series**, this is the default approach of the API.
 
-    - **In parallel**, all the methods will be called at the same time, and the solution are all of them in an array.
+   - **In parallel**, all the methods will be called at the same time, and the solution are all of them in an array.
 
-    - **In race**, all the methods will be called at the same time, but the solution is only the first of them solved.
+   - **In race**, all the methods will be called at the same time, but the solution is only the first of them solved.
 
 Moreover, the `iterator.$trace` is a special array that will remember all the steps the iterator has taken. There, you can have a vague clue of what has this iterator gone through.
 
