@@ -1,10 +1,13 @@
 {
   "name": "lifecycle-iterator",
   "version": "1.0.0",
-  "description": "",
+  "description": "Simple iterator with sync/async support.",
   "main": "index.js",
   "scripts": {
-    "cover": "nyc --report=html npm run test",
+    "upload": "npm shrinkwrap && npm run docs && npm run cover && git add . && git commit && git push",
+    "docs": "javadoc -i 'src/**/*.js' -o docs/README.api.md -f markdown && concat docs/README.ini.md docs/README.api.md docs/README.end.md -o README.md",
+    "dev": "nodemon -w 'src' -w 'test' -x npm run test",
+    "cover": "nyc --reporter=html npm run test",
     "test": "mocha test/*.test.js"
   },
   "keywords": [],
@@ -15,6 +18,7 @@
     "concat": "^1.0.3",
     "javadoc": "^2.0.0",
     "mocha": "^7.1.1",
+    "nodelive": "^1.0.6",
     "nyc": "^15.0.0"
   }
 }
